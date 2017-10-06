@@ -54,7 +54,7 @@ class Server:
         if self.server_running():
             with open('serverPipe', 'wb') as stdin:
                 stdin.write(b'/list')
-                p = subprocess.Popen(['echo', '"/list"', '>', 'pipe'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)o
+                p = subprocess.Popen(['echo', '"/list"', '>', 'pipe'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, err = p.communicate()
                 p.stdin.close()
             print(f'output: {output}')
