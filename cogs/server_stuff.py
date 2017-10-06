@@ -53,7 +53,7 @@ class Server:
         """I'll ask Server-chan who's online right now"""
         await ctx.send('woop')
         if self.server_running():
-            self.stdin.write('/list\n')
+            self.stdin.write(b'/list\n')
             output = self.stdout.readline()
             print(f'output: {output}')
             await ctx.send(output)
