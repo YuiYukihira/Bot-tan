@@ -18,6 +18,7 @@ class Server:
     @commands.command()
     async def state(self, ctx):
         """I'll tell you if Server-chan is awake."""
+        ctx.Send('Test')
         if self.server_running():
             await ctx.send(self.responses['state_on'])
         else:
