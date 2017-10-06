@@ -1,0 +1,23 @@
+{
+    "description":"Bot to help Server-chan do her work",
+    "key": "bot.key",
+    "log_channel": 365875244923092993,
+    "extensions": [
+        "cogs.server_stuff"
+    ],
+    "responses": {
+        "main": {
+            "private_message_error": "Baka, you can't do that command through private chat"
+        },
+   "server_stuff": {
+        "state_on": "Yay yay! Server-chan is awake!",
+        "state_off": "Shhhh... Server-chan is asleep",
+        "start_error_on": "Nani!? How can i wake Server-chan up if she already is?",
+        "start_begining": "Okaayyy! Waking Server-chan up now",
+        "start_end": "Server-chan is awake now, give her a ,minute or two to get ready.",
+        "stop_start": "Huh? It's Server-chan's bedtime? ok...",
+        "stop_end": "Server-chan is asleep now."
+    }
+}
+}
+
