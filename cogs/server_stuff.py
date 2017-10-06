@@ -54,6 +54,7 @@ class Server:
         if self.server_running():
             with open('/home/yui/FTBBeyond/server/serverPipe', 'w+') as stdin:
                 stdin.write('/list')
+                stdin.close()
             p = subprocess.Popen(['journalctl', '-u', 'minecraft-server.service', '-e'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             output, err = p.communicate()
             p.stdin.close()
