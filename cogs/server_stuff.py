@@ -53,7 +53,7 @@ class Server:
         """I'll ask Server-chan who's online right now"""
         if self.server_running():
             with open('/home/yui/FTBBeyond/server/serverPipe', 'w') as pipey:
-                pipey.write('/list')
+                pipey.write('/list\n')
 
             p = subprocess.Popen(['journalctl', '-u', 'minecraft-server.service', '-e'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             output, err = p.communicate()
