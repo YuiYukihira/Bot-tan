@@ -45,5 +45,13 @@ class Server:
             p.stdin.close()
             await ctx.send(self.responses['stop_end'])
 
+    @server.command()
+    async def list(self, ctx):
+        """I'll ask Server-chan who's online right now"""
+        if self.server_running():
+            p = subprocess.Popen(['service', 'minecraft-server', 'stop'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            p.stdin.write('/list')
+            output = p.stdout.readline()
+            await ctx.send(output)
 def setup(bot):
     bot.add_cog(Server(bot))
