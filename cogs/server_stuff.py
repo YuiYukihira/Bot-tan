@@ -52,8 +52,11 @@ class Server:
     async def list(self, ctx):
         """I'll ask Server-chan who's online right now"""
         if self.server_running():
-            self.stdin.write(b'/list\n')
-            output = self.stdout.readline()
+            with open('serverPipe', 'wb') as stdin:
+                stdin.write(b'/list')
+                p = subprocess.Popen(['echo', '"/list"', '>', 'pipe'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)o
+                output, err = p.communicate()
+                p.stdin.close()
             print(f'output: {output}')
             await ctx.send(output)
 def setup(bot):
