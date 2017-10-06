@@ -51,9 +51,9 @@ class Server:
     @server.command()
     async def list(self, ctx):
         """I'll ask Server-chan who's online right now"""
-        await ctx.send('woop')
         if self.server_running():
-            self.stdin.write(b'/list\n')
+            with open('/home/yui/FTBBeyond/server/pipein.txt', 'wb') as stdin:
+                stdin.write('/list\n')
             output = self.stdout.readline()
             print(f'output: {output}')
             await ctx.send(output)
