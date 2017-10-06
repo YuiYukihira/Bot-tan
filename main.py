@@ -57,6 +57,14 @@ class Bot_tan(commands.AutoShardedBot):
         elif isinstance(error, commands.CommandNotFound):
             return
 
+        embed = discord.Embed(title="EXCEPTION on_command_error", colour=0xf74242)
+
+        for i in embed_split('\n'.join(traceback.format_exception(type(error), error, error.__traceback__))):
+            embed.add_field(name=str(error) or "No Event", value=i)
+
+        await self.log(embed=embed)
+        await super().on_command_error(ctx, error)
+
     async def on_ready(self):
         for i in self.shards:
             await self.change_presence(game=discord.Game(name='Taking care of Server-chan'), shard_id = i)
