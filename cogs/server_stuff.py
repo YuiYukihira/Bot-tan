@@ -52,8 +52,8 @@ class Server:
     async def list(self, ctx):
         """I'll ask Server-chan who's online right now"""
         if self.server_running():
-            with open('/home/yui/FTBBeyond/server/serverPipe', 'wb') as stdin:
-                stdin.write(b'/list')
+            with open('/home/yui/FTBBeyond/server/serverPipe', 'w+') as stdin:
+                stdin.write('/list')
             p = subprocess.Popen(['journalctl', '-u', 'minecraft-server.service', '-e'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             output, err = p.communicate()
             p.stdin.close()
