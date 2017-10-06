@@ -52,7 +52,7 @@ class Server:
     async def list(self, ctx):
         """I'll ask Server-chan who's online right now"""
         if self.server_running():
-            self.stdin.write('/list')dd
+            self.stdin.write('/list')
             output = self.stdout.readline()
             print(f'output: {output}')
             await ctx.send(output)
