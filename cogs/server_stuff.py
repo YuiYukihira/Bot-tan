@@ -9,22 +9,23 @@ class Server:
         self.responses = self.config['responses']['server_stuff']
 
     def server_running(self):
-        print('1')
         with open(os.devnull, 'wb') as hide_output:
             exit_code = subprocess.Popen(['service', 'minecraft-server', 'status'], stdout=hide_output, stderr=hide_output).wait()
-            print('2')
             return exit_code == 0
 
-    @commands.command()
+    @commands.group()
+    async def server(self, ctx):
+        pass
+
+    @server.command()
     async def state(self, ctx):
         """I'll tell you if Server-chan is awake."""
-        await ctx.send('Test')
         if self.server_running():
             await ctx.send(self.responses['state_on'])
         else:
             await ctx.send(self.responses['state_off'])
 
-    @commands.command()
+    @server.command()
     async def start(self, ctx):
         """I'll wake server-chan up if she's asleep"""
         if self.server_running():
@@ -35,7 +36,7 @@ class Server:
             p.stdin.close()
             await ctx.send(self.responses['start_end'])
 
-    @commands.command()
+    @server.command()
     async def stop(self, ctx):
         """I'll take Server-chan to bed if she's awake"""
         if self.server_running():
