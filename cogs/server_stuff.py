@@ -52,6 +52,7 @@ class Server:
             p = subprocess.Popen(['service', 'minecraft-server', 'stop'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             p.stdin.write('/list')
             output = p.stdout.readline()
+            print(f'output: {output}')
             await ctx.send(output)
 def setup(bot):
     bot.add_cog(Server(bot))
