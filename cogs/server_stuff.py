@@ -7,6 +7,8 @@ class Server:
         self.bot = bot
         self.config = self.bot.config
         self.responses = self.config['responses']['server_stuff']
+        self.stdin = None
+        self.stdout = None
 
     def server_running(self):
         with open(os.devnull, 'wb') as hide_output:
@@ -33,7 +35,8 @@ class Server:
         else:
             await ctx.send(self.responses['start_begining'])
             p = subprocess.Popen(['service', 'minecraft-server', 'start'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-            p.stdin.close()
+            self.stdin = p.stdin
+            self.stdout = p.stdout
             await ctx.send(self.responses['start_end'])
 
     @server.command()
@@ -49,9 +52,8 @@ class Server:
     async def list(self, ctx):
         """I'll ask Server-chan who's online right now"""
         if self.server_running():
-            p = subprocess.Popen(['service', 'minecraft-server', 'stop'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-            p.stdin.write('/list')
-            output = p.stdout.readline()
+            self.stdin.write('/list')dd
+            output = self.stdout.readline()
             print(f'output: {output}')
             await ctx.send(output)
 def setup(bot):
