@@ -8,9 +8,11 @@ class Server:
         self.config = self.bot.config
         self.responses = self.config['responses']['server_stuff']
 
-    def server_running():
+    def server_running(self):
+        print('1')
         with open(os.devnull, 'wb') as hide_output:
             exit_code = subprocess.Popen(['service', 'minecraft-server', 'status'], stdout=hide_output, stderr=hide_output).wait()
+            print('2')
             return exit_code == 0
 
     @commands.command()
