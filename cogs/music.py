@@ -21,7 +21,7 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-        'before-options': '-nostdin',
+        'before_options': '-nostdin',
         'options': '-vn'
 }
 
@@ -77,7 +77,7 @@ class Music:
             ctx.voice_client.stop()
 
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(query))
-        ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) is e else None)
+        ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else None)
 
         await ctx.send('Now playing: {}'.format(query))
 

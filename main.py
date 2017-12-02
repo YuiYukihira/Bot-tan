@@ -1,3 +1,4 @@
+#!/home/yui/.pyenv/versions/Bot-tan/bin python
 import discord
 from discord.ext import commands
 import asyncio

@@ -3,7 +3,8 @@
     "key": "bot.key",
     "log_channel": 365875244923092993,
     "extensions": [
-        "cogs.server_stuff"
+        "cogs.server_stuff",
+	"cogs.music"
     ],
     "responses": {
         "main": {
