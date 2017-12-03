@@ -169,11 +169,6 @@ class Music:
         print('start')
         state = self.get_voice_state(ctx.guild)
 
-        if state.voice is None:
-            success = await ctx.invoke(self.summon)
-            if not success:
-                return
-
         if song.find('playlist?list=') >= 0:
             ytdl_opts = {
                 'flat-playlist': True,
@@ -181,6 +176,8 @@ class Music:
                 'skip-download': True
             }
             urls = {}
+            songs_to_add = []
+
             with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
                 urls = ydl.extract_info(song)
             print(urls)
@@ -194,7 +191,7 @@ class Music:
                     player.volume = 0.6
                     entry = VoiceEntry(ctx.message, player)
                     await ctx.send('Enqueued ' + str(entry))
-                    await state.songs.put(entry)
+                    songs_to_add.append(entry)
         else:
             try:
                 player = await YTDLSource.from_url(song, loop=self.bot.loop)
@@ -205,7 +202,14 @@ class Music:
                 player.volume = 0.6
                 entry = VoiceEntry(ctx.message, player)
                 await ctx.send('Enqueued ' + str(entry))
-                await state.songs.put(entry)
+                songs_to_add.append(entry)
+
+        if state.voice is None:
+            success = await ctx.invoke(self.summon)
+            if not success:
+                return
+        for song in songs_to_add:
+            state.songs.put(song)
         print('stop')
 
     @Music.command(no_pm=True)
