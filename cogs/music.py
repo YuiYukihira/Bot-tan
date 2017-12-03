@@ -209,7 +209,7 @@ class Music:
             if not success:
                 return
         for song in songs_to_add:
-            state.songs.put(song)
+            await state.songs.put(song)
         print('stop')
 
     @Music.command(no_pm=True)
