@@ -237,7 +237,7 @@ class Music:
         print('resume')
         """Resumes the currently played song."""
         state = self.get_voice_state(ctx.guild)
-        if state.is_playing():
+        if not state.is_playing():
             player = state.voice
             player.resume()
 
