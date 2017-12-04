@@ -61,7 +61,7 @@ class NormalSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def from_file(cls, filename):
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), filename)
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), filename=filename)
 
 
 class VoiceEntry:
@@ -78,8 +78,10 @@ class VoiceEntry:
                 fmt = fmt + ' [length: {0[0]}m {0[1]}s]'.format(divmod(duration, 60))
             return fmt.format(self.player, self.requester)
         else:
-            fmt = '*{0.filename}* requested by {1.display_name}'
-            return fmt.format(self.player, self.requester)
+            # TODO: fix this.
+            # fmt = '*{0.filename}* requested by {1.display_name}'
+            # return fmt.format(self.player, self.requester)
+            return 'WIP'
 
 
 class VoiceState:
@@ -108,15 +110,21 @@ class VoiceState:
 
     def toggle_next(self, e=None):
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
+        print(e)
 
     async def audio_player_task(self):
         while True:
-            print('next')
-            self.play_next_song.clear()
-            self.current = await self.songs.get()
-            await self.current.channel.send('Now playing' + str(self.current))
-            self.voice.play(self.current.player, after=self.toggle_next)
-            await self.play_next_song.wait()
+            try:
+                print('next')
+                self.play_next_song.clear()
+                self.current = await self.songs.get()
+                await self.current.channel.send('Now playing' + str(self.current))
+                print('1')
+                self.voice.play(self.current.player, after=self.toggle_next)
+                print('2')
+                await self.play_next_song.wait()
+            except Exception as e:
+                print(e)
 
 
 class Music:
@@ -169,17 +177,15 @@ class Music:
         if summoned_channel is None:
             await ctx.send('You are not in a voice channel.')
             return False
-
         state = self.get_voice_state(ctx.guild)
         if state.voice is None:
             state.voice = await summoned_channel.connect()
         else:
             await state.voice.move_to(summoned_channel)
-
         return True
 
     @music.command(no_pm=True)
-    async def play(self, ctx, song: str):
+    async def play(self, ctx, *, song):
         """Plays a song.
         If there is a song currently in the queue, then it is
         queued until the next song is done playing.
@@ -341,8 +347,8 @@ class Music:
             ydl.download([song])
         await ctx.send('songs added, you can play them now.')
 
-    @playlist.command(no_pm=True)
-    async def play(self, ctx, playlist):
+    @playlist.command(no_pm=True, name='play')
+    async def playlist_play(self, ctx, playlist):
         state = self.get_voice_state(ctx.guild)
         if state.voice is None:
             success = await ctx.invoke(self.summon)
@@ -352,7 +358,7 @@ class Music:
         songs = listdir('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist))
         for song in songs:
             print(song)
-            player = NormalSource.from_file('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist, song))
+            player = await NormalSource.from_file('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist, song))
             entry = VoiceEntry(ctx.message, player)
             await state.songs.put(entry)
         await ctx.send(f'Enqueued playlist: {playlist}')
