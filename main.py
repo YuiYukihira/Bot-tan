@@ -6,6 +6,7 @@ import subprocess, os
 import json
 import logging
 import traceback
+import sys
 from logging.handlers import RotatingFileHandler
 
 logger = logging.getLogger('discord')
@@ -14,15 +15,18 @@ handler = RotatingFileHandler(filename='Bot-tan.log', encoding='utf-8', backupCo
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
+
 def embed_split(text: str) -> [str]:
     """split text to fit embed"""
     while text:
         yield text[:1024]
         text = text[1024:]
 
+
 class Bot_tan(commands.AutoShardedBot):
     def __init__(self, config):
         self.config = json.loads(open(config).read())
+        self.config['run_dir'] = sys.argv[0][:-7]
 
         super().__init__(
                 command_prefix='!~',
@@ -82,7 +86,7 @@ class Bot_tan(commands.AutoShardedBot):
 
     async def load_cogs(self):
         for extension in self.extensions.copy():
-            self.unload_extension(entension)
+            self.unload_extension(extension)
 
         imported_modules = []
         failed_modules = []
@@ -102,6 +106,7 @@ class Bot_tan(commands.AutoShardedBot):
 
     async def close(self):
         await super().close()
+
 
 if __name__ == '__main__':
     bot = Bot_tan('bot.json')

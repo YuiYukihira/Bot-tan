@@ -3,6 +3,8 @@ import discord
 import youtube_dl
 import json
 
+from os import listdir, path, makedirs
+
 from discord.ext import commands
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -28,6 +30,7 @@ ffmpeg_options = {
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
+
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
@@ -50,6 +53,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 
+class NormalSource(discord.PCMVolumeTransformer):
+    def __init__(self, source, *, filename, volume=0.5):
+        super().__init__(source, volume)
+
+        self.filename = filename
+
+    @classmethod
+    async def from_file(cls, filename):
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), filename)
+
+
 class VoiceEntry:
     def __init__(self, message, player):
         self.requester = message.author
@@ -57,11 +71,16 @@ class VoiceEntry:
         self.player = player
 
     def __str__(self):
-        fmt = '*{0.title}* uploaded by {0.uploader} and requested by {1.display_name}'
-        duration = self.player.duration
-        if duration:
-            fmt = fmt + ' [length: {0[0]}m {0[1]}s]'.format(divmod(duration, 60))
-        return fmt.format(self.player, self.requester)
+        if isinstance(self.player, YTDLSource):
+            fmt = '*{0.title}* uploaded by {0.uploader} and requested by {1.display_name}'
+            duration = self.player.duration
+            if duration:
+                fmt = fmt + ' [length: {0[0]}m {0[1]}s]'.format(divmod(duration, 60))
+            return fmt.format(self.player, self.requester)
+        else:
+            fmt = '*{0.filename}* requested by {1.display_name}'
+            return fmt.format(self.player, self.requester)
+
 
 class VoiceState:
     def __init__(self, bot):
@@ -104,13 +123,13 @@ class Music:
     def __init__(self, bot):
         self.bot = bot
         self.voice_states = {}
+        self.config = self.bot.config
 
     def get_voice_state(self, server):
         state = self.voice_states.get(server.id)
         if state is None:
             state = VoiceState(self.bot)
             self.voice_states[server.id] = state
-
         return state
 
     async def create_voice_client(self, channel: discord.VoiceChannel):
@@ -128,11 +147,12 @@ class Music:
                 pass
 
     @commands.group()
-    async def Music(self, ctx):
+    async def music(self, ctx):
         pass
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def join(self, ctx, *, channel: discord.VoiceChannel):
+        """Tells the bot to join a specific voice channel"""
         print('join')
         try:
             await self.create_voice_client(channel)
@@ -141,8 +161,9 @@ class Music:
         else:
             await ctx.send('Ready to play audio in ' + channel.name)
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def summon(self, ctx):
+        """Makes the bot join your voice channel"""
         print('summon')
         summoned_channel = ctx.author.voice.channel
         if summoned_channel is None:
@@ -157,8 +178,8 @@ class Music:
 
         return True
 
-    @Music.command(no_pm=True)
-    async def play(self, ctx, *, song: str):
+    @music.command(no_pm=True)
+    async def play(self, ctx, song: str):
         """Plays a song.
         If there is a song currently in the queue, then it is
         queued until the next song is done playing.
@@ -168,7 +189,7 @@ class Music:
         """
         print('start')
         state = self.get_voice_state(ctx.guild)
-
+        songs_to_add = []
         if song.find('playlist?list=') >= 0:
             ytdl_opts = {
                 'flat-playlist': True,
@@ -176,7 +197,6 @@ class Music:
                 'skip-download': True
             }
             urls = {}
-            songs_to_add = []
 
             with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
                 urls = ydl.extract_info(song)
@@ -212,9 +232,8 @@ class Music:
             await state.songs.put(song)
         print('stop')
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def volume(self, ctx, value: int):
-        print('volume')
         """Sets the volume of the currently playing song."""
 
         state = self.get_voice_state(ctx.guild)
@@ -223,7 +242,7 @@ class Music:
             player.volume = value / 100
             await ctx.send('Set the volume to {:.0%}'.format(player.volume))
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def pause(self, ctx):
         print('pause')
         """Pauses the currently played song."""
@@ -232,7 +251,7 @@ class Music:
             player = state.voice
             player.pause()
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def resume(self, ctx):
         print('resume')
         """Resumes the currently played song."""
@@ -241,7 +260,7 @@ class Music:
             player = state.voice
             player.resume()
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def stop(self, ctx):
         print('stop')
         """Stops playing audio and leaves the voice channel.
@@ -261,11 +280,11 @@ class Music:
         except:
             pass
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def skip(self, ctx):
         print('skip')
         """Vote to skip a song. The song requester can automatically skip.
-        3 skip votes are needed for the song to be skipped.
+        2 skip votes are needed for the song to be skipped.
         """
 
         state = self.get_voice_state(ctx.guild)
@@ -280,7 +299,7 @@ class Music:
         elif voter.id not in state.skip_votes:
             state.skip_votes.add(voter.id)
             total_votes = len(state.skip_votes)
-            if total_votes >= 3:
+            if total_votes >= 2:
                 await ctx.send('Skip vote passed, skipping song...')
                 state.skip()
             else:
@@ -288,7 +307,7 @@ class Music:
         else:
             await ctx.send('You have already voted to skip this song.')
 
-    @Music.command(no_pm=True)
+    @music.command(no_pm=True)
     async def playing(self, ctx):
         """Shows info about the currently played song."""
 
@@ -298,6 +317,51 @@ class Music:
         else:
             skip_count = len(state.skip_votes)
             await ctx.send('Now playing {} [skips: {}/3]'.format(state.current, skip_count))
+
+    @music.group(no_pm=True)
+    async def playlist(self, ctx):
+        pass
+
+    @playlist.command(no_pm=True)
+    async def add(self, ctx, playlist, song):
+        await ctx.send('adding songs to playlist')
+        ytdl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': '{}/{}/{}/{}/%(title)s.%(ext)s'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist),
+            'restrictfilenames': True,
+            'noplaylist': True,
+            'nocheckcertificate': True,
+            'ignoreerrors': False,
+            'logtostderr': False,
+            #'quiet': True,
+            'no_warnings': True,
+            #'default_search': 'auto'
+        }
+        with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
+            ydl.download([song])
+        await ctx.send('songs added, you can play them now.')
+
+    @playlist.command(no_pm=True)
+    async def play(self, ctx, playlist):
+        state = self.get_voice_state(ctx.guild)
+        if state.voice is None:
+            success = await ctx.invoke(self.summon)
+            if not success:
+                return
+
+        songs = listdir('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist))
+        for song in songs:
+            print(song)
+            player = discord.FFmpegPCMAudio('{}/{}/{}/{}/{}'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist, song), **ffmpeg_options)
+            entry = VoiceEntry(ctx.message, player)
+            await state.songs.put(entry)
+        await ctx.send(f'Enqueued playlist: {playlist}')
+
+    @playlist.command(no_pm=True)
+    async def create(self, ctx, *, playlist):
+        if not path.exists('{}/{}/{}/{}'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist)):
+            makedirs('{}/{}/{}/{}'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist))
+
 
 def setup(bot):
     bot.add_cog(Music(bot))
