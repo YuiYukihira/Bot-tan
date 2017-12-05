@@ -1,13 +1,13 @@
 #!/home/yui/.pyenv/versions/Bot-tan/bin python
-import discord
-from discord.ext import commands
-import asyncio
-import subprocess, os
 import json
 import logging
-import traceback
+import platform
 import sys
+import traceback
 from logging.handlers import RotatingFileHandler
+
+import discord
+from discord.ext import commands
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -15,6 +15,13 @@ handler = RotatingFileHandler(filename='Bot-tan.log', encoding='utf-8', backupCo
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
+
+class OSError(Exception):
+    def __init__(self, system):
+        self.system = system
+
+    def __repr__(self):
+        return 'ERROR: os is not compatible, must not be windows like system. Your system: {}'.format(self.system)
 
 def embed_split(text: str) -> [str]:
     """split text to fit embed"""
@@ -109,5 +116,8 @@ class Bot_tan(commands.AutoShardedBot):
 
 
 if __name__ == '__main__':
-    bot = Bot_tan('bot.json')
-    bot.run()
+    if platform.system() == 'Windows':
+        raise OSError(platform.system())
+    else:
+        bot = Bot_tan('bot.json')
+        bot.run()

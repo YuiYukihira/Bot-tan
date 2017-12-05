@@ -1,10 +1,8 @@
 import asyncio
-import discord
-import youtube_dl
-import json
-
 from os import listdir, path, makedirs
 
+import discord
+import youtube_dl
 from discord.ext import commands
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -329,11 +327,15 @@ class Music:
         pass
 
     @playlist.command(no_pm=True)
-    async def add(self, ctx, playlist, song):
+    async def playlist_add(self, ctx, playlist, song):
         await ctx.send('adding songs to playlist')
         ytdl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': '{}/{}/{}/{}/%(title)s.%(ext)s'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist),
+            'outtmpl': '{}/{}/{}/{}/%(title)s.%(ext)s'.format(
+                self.config['run_dir'],
+                self.config['music']['music_dir'],
+                str(ctx.guild.id),
+                playlist),
             'restrictfilenames': True,
             'noplaylist': True,
             'nocheckcertificate': True,
@@ -355,19 +357,64 @@ class Music:
             if not success:
                 return
 
-        songs = listdir('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist))
+        songs = listdir(
+            '{}/{}/{}/{}/'.format(
+                self.config['run_dir'],
+                self.config['music']['music_dir'],
+                str(ctx.guild.id),
+                playlist))
         for song in songs:
             print(song)
-            player = await NormalSource.from_file('{}/{}/{}/{}/'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist, song))
+            player = await NormalSource.from_file(
+                '{}/{}/{}/{}/'.format(self.config['run_dir'],
+                                      self.config['music']['music_dir'],
+                                      str(ctx.guild.id),
+                                      playlist,
+                                      song))
             entry = VoiceEntry(ctx.message, player)
             await state.songs.put(entry)
         await ctx.send(f'Enqueued playlist: {playlist}')
 
     @playlist.command(no_pm=True)
     async def create(self, ctx, *, playlist):
-        if not path.exists('{}/{}/{}/{}'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist)):
-            makedirs('{}/{}/{}/{}'.format(self.config['run_dir'], self.config['music']['music_dir'], str(ctx.guild.id), playlist))
+        if not path.exists('{}/{}/{}/{}'.format(
+                self.config['run_dir'],
+                self.config['music']['music_dir'],
+                str(ctx.guild.id),
+                playlist)):
+            makedirs(
+                '{}/{}/{}/{}'.format(
+                    self.config['run_dir'],
+                    self.config['music']['music_dir'],
+                    str(ctx.guild.id),
+                    playlist))
 
+    @music.group(no_pm=True)
+    async def file_add(self, ctx, *, playlist):
+        await ctx.send('Adding your files to the playlist')
+        if not ctx.message.attachments:
+            await ctx.send('Wait, you didn\'t attach any files for me to add...')
+        else:
+            if not path.exists(
+                    '{}/{}/{}/{}'.format(
+                        self.config['run_dir'],
+                        self.config['music']['music_dir'],
+                        str(ctx.guild.id),
+                        playlist)):
+                makedirs(
+                    '{}/{}/{}/{}'.format(
+                        self.config['run_dir'],
+                        self.config['music']['music_dir'],
+                        str(ctx.guild.id),
+                        playlist))
+            for attachment in ctx.message.attachments:
+                attachment.save(
+                    '{}/{}/{}/{}/'.format(
+                        self.config['run_dir'],
+                        self.config['music']['music_dir'],
+                        str(ctx.guild.id),
+                        playlist,
+                        attachment.filename))
 
 def setup(bot):
     bot.add_cog(Music(bot))
