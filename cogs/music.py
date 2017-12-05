@@ -366,11 +366,11 @@ class Music:
         for song in songs:
             print(song)
             player = await NormalSource.from_file(
-                '{}/{}/{}/{}/'.format(self.config['run_dir'],
-                                      self.config['music']['music_dir'],
-                                      str(ctx.guild.id),
-                                      playlist,
-                                      song))
+                '{}/{}/{}/{}/{}'.format(self.config['run_dir'],
+                                        self.config['music']['music_dir'],
+                                        str(ctx.guild.id),
+                                        playlist,
+                                        song))
             entry = VoiceEntry(ctx.message, player)
             await state.songs.put(entry)
         await ctx.send(f'Enqueued playlist: {playlist}')
