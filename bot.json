@@ -1,5 +1,5 @@
 {
-    "description": "Bot to help Server-chan do her work",
+    "description": "Bot-tan will help Server-chan do her work, she'll also sing to you when you ask.\n\n ISSUES, REQUESTS, FIXES: git.yuiyukihira.moe/YuiYukihira/Bot-tan/issues",
     "key": "bot.key",
     "log_channel": 365875244923092993,
     "extensions": [
