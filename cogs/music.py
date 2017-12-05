@@ -326,7 +326,7 @@ class Music:
     async def playlist(self, ctx):
         pass
 
-    @playlist.command(no_pm=True)
+    @playlist.command(no_pm=True, name='add')
     async def playlist_add(self, ctx, playlist, song):
         await ctx.send('adding songs to playlist')
         ytdl_opts = {
