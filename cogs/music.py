@@ -1,9 +1,11 @@
 import asyncio
-from os import listdir, path, makedirs
+import uuid
 
 import discord
 import youtube_dl
 from discord.ext import commands
+
+from .utils.database_models import MPlaylistInfo, MGuild
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -152,6 +154,13 @@ class Music:
             except:
                 pass
 
+    def gen_id(self):
+        return uuid.uuid4().int & (1 << 64) - 1
+
+    @property
+    def db(self):
+        return self.bot.db
+
     @commands.group()
     async def music(self, ctx):
         pass
@@ -181,60 +190,6 @@ class Music:
         else:
             await state.voice.move_to(summoned_channel)
         return True
-
-    @music.command(no_pm=True)
-    async def play(self, ctx, *, song):
-        """Plays a song.
-        If there is a song currently in the queue, then it is
-        queued until the next song is done playing.
-        This command automatically searches as well from YouTube.
-        The list of supported sites can be found here:
-        https://rg3.github.io/youtube-dl/supportedsites.html
-        """
-        print('start')
-        state = self.get_voice_state(ctx.guild)
-        songs_to_add = []
-        if song.find('playlist?list=') >= 0:
-            ytdl_opts = {
-                'flat-playlist': True,
-                'dump-single-json': True,
-                'skip-download': True
-            }
-            urls = {}
-
-            with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
-                urls = ydl.extract_info(song)
-            print(urls)
-            for song in urls['entries']:
-                try:
-                    player = await YTDLSource.from_url('https://www.youtube.com/watch?v='+song['id'], loop=self.bot.loop)
-                except Exception as e:
-                    fmt = 'An error occurred while processing this request: ```py\n{}: {}\n```'
-                    await ctx.send(fmt.format(type(e).__name__, e))
-                else:
-                    player.volume = 0.6
-                    entry = VoiceEntry(ctx.message, player)
-                    await ctx.send('Enqueued ' + str(entry))
-                    songs_to_add.append(entry)
-        else:
-            try:
-                player = await YTDLSource.from_url(song, loop=self.bot.loop)
-            except Exception as e:
-                fmt = 'An error occurred while processing this request: ```py\n{}: {}\n```'
-                await ctx.send(fmt.format(type(e).__name__, e))
-            else:
-                player.volume = 0.6
-                entry = VoiceEntry(ctx.message, player)
-                await ctx.send('Enqueued ' + str(entry))
-                songs_to_add.append(entry)
-
-        if state.voice is None:
-            success = await ctx.invoke(self.summon)
-            if not success:
-                return
-        for song in songs_to_add:
-            await state.songs.put(song)
-        print('stop')
 
     @music.command(no_pm=True)
     async def volume(self, ctx, value: int):
@@ -311,110 +266,22 @@ class Music:
         else:
             await ctx.send('You have already voted to skip this song.')
 
-    @music.command(no_pm=True)
-    async def playing(self, ctx):
-        """Shows info about the currently played song."""
-
-        state = self.get_voice_state(ctx.guild)
-        if state.current is None:
-            await ctx.send('Not playing anything.')
-        else:
-            skip_count = len(state.skip_votes)
-            await ctx.send('Now playing {} [skips: {}/3]'.format(state.current, skip_count))
-
-    @music.group(no_pm=True)
+    @music.group()
     async def playlist(self, ctx):
         pass
 
-    @playlist.command(no_pm=True, name='add')
-    async def playlist_add(self, ctx, playlist, song):
-        await ctx.send('adding songs to playlist')
-        ytdl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': '{}/{}/{}/{}/%(title)s.%(ext)s'.format(
-                self.config['run_dir'],
-                self.config['music']['music_dir'],
-                str(ctx.guild.id),
-                playlist),
-            'restrictfilenames': True,
-            'noplaylist': True,
-            'nocheckcertificate': True,
-            'ignoreerrors': False,
-            'logtostderr': False,
-            #'quiet': True,
-            'no_warnings': True,
-            #'default_search': 'auto'
-        }
-        with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
-            ydl.download([song])
-        await ctx.send('songs added, you can play them now.')
+    @playlist.command(name='create', no_pm=True)
+    async def playlist_create(self, ctx, name: str):
+        async with self.db.get_session() as sess:
+            pl_id = self.gen_id()
+            query1 = await sess.insert.rows(MGuild(g_id=ctx.guild.id, p_id=pl_id))
+            query1 = query1.on_conflict(MGuild.p_id).nothing()
+            await query1.run()
+            query2 = await sess.insert.rows(MPlaylistInfo(p_id=pl_id, p_name=name, p_creator=ctx.author.id))
+            query2 = query2.on_conflict(MPlaylistInfo.p_id).nothing()
+            await query2.run()
+        await ctx.send('Playlist created!')
 
-    @playlist.command(no_pm=True, name='play')
-    async def playlist_play(self, ctx, playlist):
-        state = self.get_voice_state(ctx.guild)
-        if state.voice is None:
-            success = await ctx.invoke(self.summon)
-            if not success:
-                return
-
-        songs = listdir(
-            '{}/{}/{}/{}/'.format(
-                self.config['run_dir'],
-                self.config['music']['music_dir'],
-                str(ctx.guild.id),
-                playlist))
-        for song in songs:
-            print(song)
-            player = await NormalSource.from_file(
-                '{}/{}/{}/{}/{}'.format(self.config['run_dir'],
-                                        self.config['music']['music_dir'],
-                                        str(ctx.guild.id),
-                                        playlist,
-                                        song))
-            entry = VoiceEntry(ctx.message, player)
-            await state.songs.put(entry)
-        await ctx.send(f'Enqueued playlist: {playlist}')
-
-    @playlist.command(no_pm=True)
-    async def create(self, ctx, *, playlist):
-        if not path.exists('{}/{}/{}/{}'.format(
-                self.config['run_dir'],
-                self.config['music']['music_dir'],
-                str(ctx.guild.id),
-                playlist)):
-            makedirs(
-                '{}/{}/{}/{}'.format(
-                    self.config['run_dir'],
-                    self.config['music']['music_dir'],
-                    str(ctx.guild.id),
-                    playlist))
-
-    @music.group(no_pm=True)
-    async def file_add(self, ctx, *, playlist):
-        await ctx.send('Adding your files to the playlist')
-        if not ctx.message.attachments:
-            await ctx.send('Wait, you didn\'t attach any files for me to add...')
-        else:
-            if not path.exists(
-                    '{}/{}/{}/{}'.format(
-                        self.config['run_dir'],
-                        self.config['music']['music_dir'],
-                        str(ctx.guild.id),
-                        playlist)):
-                makedirs(
-                    '{}/{}/{}/{}'.format(
-                        self.config['run_dir'],
-                        self.config['music']['music_dir'],
-                        str(ctx.guild.id),
-                        playlist))
-            for attachment in ctx.message.attachments:
-                attachment.save(
-                    '{}/{}/{}/{}/'.format(
-                        self.config['run_dir'],
-                        self.config['music']['music_dir'],
-                        str(ctx.guild.id),
-                        playlist,
-                        attachment.filename))
 
 def setup(bot):
     bot.add_cog(Music(bot))

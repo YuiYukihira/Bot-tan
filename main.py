@@ -7,7 +7,10 @@ import traceback
 from logging.handlers import RotatingFileHandler
 
 import discord
+from asyncqlio.db import DatabaseInterface
 from discord.ext import commands
+
+from .cogs.utils.database_models import Table
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -16,12 +19,13 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 
-class OSError(Exception):
+class BOSError(Exception):
     def __init__(self, system):
         self.system = system
 
     def __repr__(self):
         return 'ERROR: os is not compatible, must not be windows like system. Your system: {}'.format(self.system)
+
 
 def embed_split(text: str) -> [str]:
     """split text to fit embed"""
@@ -34,6 +38,8 @@ class Bot_tan(commands.AutoShardedBot):
     def __init__(self, config):
         self.config = json.loads(open(config).read())
         self.config['run_dir'] = sys.argv[0][:-7]
+        self.db = DatabaseInterface(self.config['database'])
+        self.db.bind_tables(Table.metadata)
 
         super().__init__(
                 command_prefix='!~',
@@ -117,7 +123,7 @@ class Bot_tan(commands.AutoShardedBot):
 
 if __name__ == '__main__':
     if platform.system() == 'Windows':
-        raise OSError(platform.system())
+        raise BOSError(platform.system())
     else:
         bot = Bot_tan('bot.json')
         bot.run()
