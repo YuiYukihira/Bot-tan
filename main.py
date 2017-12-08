@@ -67,6 +67,7 @@ class Bot_tan(commands.AutoShardedBot):
             await ctx.send(error, delete_after=5)
             return
         elif isinstance(error, commands.CommandNotFound):
+            await ctx.send('That command doesn\'t exist.')
             return
 
         embed = discord.Embed(title="EXCEPTION on_command_error", colour=0xf74242)
